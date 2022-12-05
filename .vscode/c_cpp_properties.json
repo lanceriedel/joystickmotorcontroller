@@ -10,6 +10,7 @@
             "includePath": [
                 "/home/lance/projects/joystickmotorcontroller/include",
                 "/home/lance/projects/joystickmotorcontroller/src",
+                "/home/lance/projects/joystickmotorcontroller/.pio/libdeps/uno/Cytron Motor Drivers Library",
                 "/home/lance/.platformio/packages/framework-arduino-avr/cores/arduino",
                 "/home/lance/.platformio/packages/framework-arduino-avr/variants/standard",
                 "/home/lance/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
@@ -24,6 +25,7 @@
                 "path": [
                     "/home/lance/projects/joystickmotorcontroller/include",
                     "/home/lance/projects/joystickmotorcontroller/src",
+                    "/home/lance/projects/joystickmotorcontroller/.pio/libdeps/uno/Cytron Motor Drivers Library",
                     "/home/lance/.platformio/packages/framework-arduino-avr/cores/arduino",
                     "/home/lance/.platformio/packages/framework-arduino-avr/variants/standard",
                     "/home/lance/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
@@ -35,7 +37,7 @@
                 ]
             },
             "defines": [
-                "PLATFORMIO=60104",
+                "PLATFORMIO=60105",
                 "ARDUINO_AVR_UNO",
                 "F_CPU=16000000L",
                 "ARDUINO_ARCH_AVR",

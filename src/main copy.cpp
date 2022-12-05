@@ -1,6 +1,4 @@
 #include <Arduino.h>
- #include "CytronMotorDriver.h"
-
 
 const byte XPotPin = A0;  // Left-Right control
 const byte YPotPin = A1;  // Forward-backward throttle
@@ -23,22 +21,18 @@ int INPUT_STATE_JOY = 6;
 
 
 
-const int PWM_LIMIT = 255;
+const int PWM_LIMIT = 127;
 const int DEAD_ZONE = 10;
 const int YAW_SENSITIVITY = 100;
-
-// Configure the motor driver.
-CytronMD motor1(PWM_DIR, 3, 4);  // PWM 1 = Pin 3, DIR 1 = Pin 4.
-CytronMD motor2(PWM_DIR, 9, 10); // PWM 2 = Pin 9, DIR 2 = Pin 10.
 
 
 void setup()
 {
   // Set pin modes on motor pins
-  //pinMode(MOTORLEFT, OUTPUT); // Set Arduino pin 6 (MOTORLEFT) as output.
-  //pinMode(MOTORRIGHT, OUTPUT); // Set Arduino pin 5 (MOTORRIGHT) as output.
-  //analogWrite(MOTORLEFT, 0);//
-  //analogWrite(MOTORRIGHT, 0);//
+  pinMode(MOTORLEFT, OUTPUT); // Set Arduino pin 6 (MOTORLEFT) as output.
+  pinMode(MOTORRIGHT, OUTPUT); // Set Arduino pin 5 (MOTORRIGHT) as output.
+  analogWrite(MOTORLEFT, 0);//
+  analogWrite(MOTORRIGHT, 0);//
 
   pinMode(RCSPEED,INPUT);
   pinMode(RCYAW,INPUT);
@@ -56,8 +50,7 @@ void LeftMotorSetSpeed(byte speed)
   // Set motor pins to run the motor forward at the specified speed
   (void) speed;
   Serial.print(F("leftmotor:"));Serial.println(int(speed));
-  //analogWrite(MOTORLEFT, speed);  
-  motor1.setSpeed(speed); 
+  analogWrite(MOTORLEFT, speed);   
 
 }
 
@@ -67,9 +60,7 @@ void RightMotorSetSpeed(byte speed)
   // Set motor pins to run the motor forward at the specified speed
   (void) speed;
    Serial.print(F("rightmotor:"));Serial.println(int(speed));
-  //analogWrite(MOTORRIGHT, speed); 
-  motor1.setSpeed(speed); 
-  
+     analogWrite(MOTORRIGHT, speed);   
 
 }
 
@@ -78,6 +69,8 @@ void RightMotorSetSpeed(byte speed)
 void loop()
 {
  
+
+
   byte inputStateJoy = digitalRead(INPUT_STATE_JOY);
   byte inputStateRC = digitalRead(INPUT_STATE_RADIO);
   
@@ -95,8 +88,8 @@ void loop()
   Serial.println(":");
   Serial.print(F("InputState:"));Serial.println(int(inputState));
 
-  int leftSpeed =0;
-  int rightSpeed = 0;
+  int leftSpeed =127;
+  int rightSpeed = 127;
   
   //Switch is off
   if (inputState==INPUT_STATE_OFF) {
@@ -180,12 +173,12 @@ void loop()
   Serial.println(":");
 
   if (leftSpeed < 0)
-    LeftMotorSetSpeed(leftSpeed);
+    LeftMotorSetSpeed(leftSpeed + 127);
   else
     LeftMotorSetSpeed(leftSpeed );
 
   if (rightSpeed < 0)
-    RightMotorSetSpeed(rightSpeed);
+    RightMotorSetSpeed(rightSpeed + 127);
   else
     RightMotorSetSpeed(rightSpeed );
 
