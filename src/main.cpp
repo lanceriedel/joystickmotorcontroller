@@ -2,38 +2,42 @@
  #include "CytronMotorDriver.h"
 
 
-const byte XPotPin = A0;  // Left-Right control
-const byte YPotPin = A1;  // Forward-backward throttle
-
 const int INPUT_STATE_RADIO_ON = 1;
 const int INPUT_STATE_JOYSTICK_ON = 2;
 const int INPUT_STATE_OFF = 0;
 
-int MOTORLEFT = A2; // Arduino pin 6 is connected to MDDS60 pin AN1.
-int MOTORRIGHT = A3; // Arduino pin 5 is connected to MDDS60 pin MOTORRIGHT.
-int RCYAW = A5; // 
-int RCSPEED = A4; // Arduino pin 5 is connected to MDDS60 pin MOTORRIGHT.
+int MOTORLEFT = 3;
+int MOTORRIGHT = 9;
 
-int JOYYWIN = A0; // Arduino pin 6 is connected to MDDS60 pin AN1.
-int JOYXWIN = A1; // Arduino pin 5 is connected to MDDS60 pin MOTORRIGHT.
+int MOTORLEFTDIR = 4;
+int MOTORRIGHTDIR = 10;
+
+int RCYAW = A5; //
+int RCSPEED = A4; //
+
+int JOYYWIN = A0; //
+int JOYXWIN = A1; //
 
 int INPUT_STATE = INPUT_STATE_OFF; //1 = RADIO, 0 = OFF, 2 = JOYSTICK
 int INPUT_STATE_RADIO = 5;
 int INPUT_STATE_JOY = 6;
 
 
-
-const int PWM_LIMIT = 255;
+const int PWM_LIMIT = 200;
 const int DEAD_ZONE = 10;
-const int YAW_SENSITIVITY = 100;
+const int YAW_SENSITIVITY = 90;
 
 // Configure the motor driver.
-CytronMD motor1(PWM_DIR, 3, 4);  // PWM 1 = Pin 3, DIR 1 = Pin 4.
-CytronMD motor2(PWM_DIR, 9, 10); // PWM 2 = Pin 9, DIR 2 = Pin 10.
+CytronMD motor1(PWM_DIR, MOTORLEFT, MOTORLEFTDIR);  // PWM 1 = Pin 3, DIR 1 = Pin 4.
+CytronMD motor2(PWM_DIR, MOTORRIGHT, MOTORRIGHTDIR); // PWM 2 = Pin 9, DIR 2 = Pin 10.
 
 
 void setup()
 {
+
+  motor1.setSpeed(0);
+  motor2.setSpeed(0);
+
   // Set pin modes on motor pins
   //pinMode(MOTORLEFT, OUTPUT); // Set Arduino pin 6 (MOTORLEFT) as output.
   //pinMode(MOTORRIGHT, OUTPUT); // Set Arduino pin 5 (MOTORRIGHT) as output.
@@ -51,25 +55,24 @@ void setup()
 
 }
 
-void LeftMotorSetSpeed(byte speed)
+void LeftMotorSetSpeed(int speed)
 {
   // Set motor pins to run the motor forward at the specified speed
   (void) speed;
   Serial.print(F("leftmotor:"));Serial.println(int(speed));
-  //analogWrite(MOTORLEFT, speed);  
-  motor1.setSpeed(speed); 
+  //analogWrite(MOTORLEFT, speed);
+  motor1.setSpeed(speed);
 
 }
 
 
-void RightMotorSetSpeed(byte speed)
+void RightMotorSetSpeed(int speed)
 {
   // Set motor pins to run the motor forward at the specified speed
   (void) speed;
    Serial.print(F("rightmotor:"));Serial.println(int(speed));
-  //analogWrite(MOTORRIGHT, speed); 
-  motor1.setSpeed(speed); 
-  
+  //analogWrite(MOTORRIGHT, speed);
+  motor2.setSpeed(speed);
 
 }
 
@@ -77,10 +80,10 @@ void RightMotorSetSpeed(byte speed)
 
 void loop()
 {
- 
+
   byte inputStateJoy = digitalRead(INPUT_STATE_JOY);
   byte inputStateRC = digitalRead(INPUT_STATE_RADIO);
-  
+
   Serial.print(F("InputStateRAWJoy:"));Serial.println(int(inputStateJoy));
   Serial.print(F("InputStateRAWRC:"));Serial.println(int(inputStateRC));
 
@@ -97,7 +100,7 @@ void loop()
 
   int leftSpeed =0;
   int rightSpeed = 0;
-  
+
   //Switch is off
   if (inputState==INPUT_STATE_OFF) {
     Serial.print(F("STOP ALL!:"));Serial.println(int(inputState));
@@ -108,35 +111,38 @@ void loop()
   else if (inputState==INPUT_STATE_RADIO_ON) {
     int speedInput = pulseIn(RCSPEED, HIGH, 25000);
     int yawInput = pulseIn(RCYAW, HIGH, 25000);
+      Serial.print(F("yawInputR:"));Serial.println(int(yawInput));
+      Serial.print(F("speedInputR:"));Serial.println(int(speedInput));
+
+    if (speedInput==0 || yawInput==0) {
+        leftSpeed = 0;
+        rightSpeed = 0;
+    } else {
+
+    
+      Serial.println(":");
 
 
-    Serial.print(F("yawInputR:"));Serial.println(int(yawInput));
-    Serial.print(F("speedInputR:"));Serial.println(int(speedInput));
-    Serial.println(":");
+      // map 'speed' to the range -PWM_LIMIT (backward), +PWM_LIMIT (forward)
+      speedInput = map(speedInput, 900, 2000, -PWM_LIMIT, PWM_LIMIT);
+      yawInput = map(yawInput, 900, 2000, -YAW_SENSITIVITY, YAW_SENSITIVITY);
 
+      // Put in dead zones
+      if (speedInput > -DEAD_ZONE && speedInput < DEAD_ZONE)
+        speedInput = 0;
+      if (yawInput > -DEAD_ZONE && yawInput < DEAD_ZONE)
+        yawInput = 0;
+      speedInput = speedInput *-1;
 
-    // map 'speed' to the range -PWM_LIMIT (backward), +PWM_LIMIT (forward)
-    speedInput = map(speedInput, 900, 2000, -PWM_LIMIT, PWM_LIMIT);
-    yawInput = map(yawInput, 900, 2000, -YAW_SENSITIVITY, YAW_SENSITIVITY);
+      int gamma = 3; //gain
+      int speedExp =(speedInput^gamma)/(PWM_LIMIT^(gamma-1));
+      int gammaYaw = 2; //gain
+      int yawExp =(yawInput^gammaYaw)/(YAW_SENSITIVITY^(gammaYaw-1));
 
-    // Put in dead zones
-    if (speedInput > -DEAD_ZONE && speedInput < DEAD_ZONE)
-      speedInput = 0;
-    if (yawInput > -DEAD_ZONE && yawInput < DEAD_ZONE)
-      yawInput = 0;
+      leftSpeed = speedExp + yawExp;
+      rightSpeed = speedExp - yawExp;
 
-    leftSpeed = speedInput + yawInput;
-    rightSpeed = speedInput - yawInput;
-
-    // Serial.print(F("yawInputRAW:"));Serial.println(int(yawInput));
-    //Serial.print(F("speedInputRAW:"));Serial.println(int(speedInput));
-
-  //   Serial.print(F("leftSpeedRAW:"));Serial.println(int(leftSpeed));
-  //  Serial.print(F("rightSpeedRAW:"));Serial.println(int(rightSpeed));
-
-    // neither motor can go faster than maximum speed
-    leftSpeed = constrain(leftSpeed, -PWM_LIMIT, PWM_LIMIT);
-    rightSpeed = constrain(rightSpeed, -PWM_LIMIT, PWM_LIMIT);
+    }
   }
 
 //Switched to JOYSTICK
@@ -150,9 +156,12 @@ void loop()
 
 
     // map 'speed' to the range -PWM_LIMIT (backward), +PWM_LIMIT (forward)
-    speedInput = 1023-speedInput;
+    //speedInput = 1023-speedInput;
+    yawInput = 1023-yawInput;
     speedInput = map(speedInput, 0, 1023, -PWM_LIMIT, PWM_LIMIT);
     yawInput = map(yawInput, 0, 1023, -YAW_SENSITIVITY, YAW_SENSITIVITY);
+
+    Serial.print(F("speedInputAfterMap:"));Serial.println(int(speedInput));
 
     // Put in dead zones
     if (speedInput > -DEAD_ZONE && speedInput < DEAD_ZONE)
@@ -160,35 +169,25 @@ void loop()
     if (yawInput > -DEAD_ZONE && yawInput < DEAD_ZONE)
       yawInput = 0;
 
-    leftSpeed = speedInput + yawInput;
-    rightSpeed = speedInput - yawInput;
+    int gamma = 3; //gain
+    int speedExp =(speedInput^gamma)/(PWM_LIMIT^(gamma-1));
+    int gammaYaw = 2; //gain
+    int yawExp =(yawInput^gammaYaw)/(YAW_SENSITIVITY^(gammaYaw-1));
 
-    // Serial.print(F("yawInputRAW:"));Serial.println(int(yawInput));
-    //Serial.print(F("speedInputRAW:"));Serial.println(int(speedInput));
+    leftSpeed = speedExp + yawExp;
+    rightSpeed = speedExp - yawExp;
 
-  //   Serial.print(F("leftSpeedRAW:"));Serial.println(int(leftSpeed));
-  //  Serial.print(F("rightSpeedRAW:"));Serial.println(int(rightSpeed));
+  Serial.print(F("Left:"));Serial.println(int(leftSpeed));
+  Serial.print(F("Right:"));Serial.println(int(rightSpeed));
 
-    // neither motor can go faster than maximum speed
-    leftSpeed = constrain(leftSpeed, -PWM_LIMIT, PWM_LIMIT);
-    rightSpeed = constrain(rightSpeed, -PWM_LIMIT, PWM_LIMIT);
+
   }
 
-
-
- 
   Serial.println(":");
 
-  if (leftSpeed < 0)
-    LeftMotorSetSpeed(leftSpeed);
-  else
-    LeftMotorSetSpeed(leftSpeed );
+  LeftMotorSetSpeed(leftSpeed);
+  RightMotorSetSpeed(rightSpeed);
 
-  if (rightSpeed < 0)
-    RightMotorSetSpeed(rightSpeed);
-  else
-    RightMotorSetSpeed(rightSpeed );
-
-  delay(1150);
+  delay(1);
 }
 
